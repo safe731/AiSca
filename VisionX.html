@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VisionX Premium</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+--bg:#070707;--bg2:#101010;--card:#171717;--text:#fff;--text2:#b3b3b3;
+--accent:#E50914;--border:rgba(255,255,255,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);font-family:Segoe UI,sans-serif;color:#fff;overflow-x:hidden;padding-top:115px;padding-bottom:125px}
+img{display:block;width:100%}
+button{cursor:pointer;border:none;outline:none}
+::-webkit-scrollbar{display:none}
+
+header{position:fixed;top:0;left:0;right:0;height:58px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.94);backdrop-filter:blur(15px);z-index:9999;border-bottom:1px solid var(--border)}
+.logo{font-size:24px;font-weight:900;color:var(--accent)}.logo span{color:#fff}
+
+.top-ad{position:fixed;top:58px;left:0;right:0;min-height:50px;background:#0f0f0f;display:flex;justify-content:center;align-items:center;z-index:999;border-bottom:1px solid var(--border);overflow:hidden}
+.page{display:none;padding:0 12px}.page.active{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* HERO & SLIDER */
+.hero{height:280px;border-radius:20px;overflow:hidden;position:relative;margin-bottom:22px;background-size:cover;background-position:center;transition: background-image 1s ease-in-out}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.95),transparent);z-index:1}
+.hero-content{position:absolute;left:16px;right:16px;bottom:18px;z-index:2}
+.hero-badge{display:inline-block;padding:5px 10px;background:rgba(229,9,20,.2);border:1px solid rgba(255,255,255,.08);border-radius:30px;font-size:10px;margin-bottom:10px}
+.hero-title{font-size:28px;font-weight:900;margin-bottom:8px;text-shadow:2px 2px 4px rgba(0,0,0,0.8)}
+.hero-desc{font-size:12px;line-height:1.5;color:#ddd;margin-bottom:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.slider-dots{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;transition:.3s}
+.dot.active{background:var(--accent);transform:scale(1.2)}
+
+.btn{height:44px;padding:0 18px;border-radius:12px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:5px;transition:.2s}.btn:active{transform:scale(.95)}
+.btn-primary{background:var(--accent);color:#fff}.btn-dark{background:rgba(255,255,255,.1);color:#fff}
+
+.section-title{font-size:18px;font-weight:800;margin-bottom:14px}
+.search-box{margin-bottom:18px;position:relative}
+.search-input{width:100%;height:48px;padding:0 16px 0 45px;border:1px solid var(--border);border-radius:14px;background:#141414;color:#fff;font-size:14px;transition:.3s}.search-input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:16px;top:16px;color:#888;font-size:14px}
+
+.movie-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:var(--card);border-radius:18px;overflow:hidden;position:relative;border:1px solid var(--border);transition:.3s;cursor:pointer}.card:hover{transform:translateY(-5px);border-color:rgba(255,255,255,0.2)}
+.card img{aspect-ratio:2/3;object-fit:cover;transition:.4s;width:100%}.card:hover img{transform:scale(1.05)}
+.card-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.92),transparent 60%);pointer-events:none}
+.card-top{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;z-index:3}
+.badge{padding:4px 8px;background:var(--accent);border-radius:30px;font-size:9px;font-weight:700}
+.card-actions{display:flex;gap:6px}
+.icon-btn{width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.3s}.icon-btn:hover{background:var(--accent)}
+.card-info{position:absolute;bottom:0;left:0;right:0;padding:12px;z-index:3}
+.card-title{font-size:13px;font-weight:700;margin-bottom:5px}.card-meta{display:flex;justify-content:space-between;font-size:10px;color:#ccc}
+
+/* PLAYER - DYNAMIC SIZE */
+.player-modal{position:fixed;inset:0;background:#000;z-index:99999;display:none;overflow-y:auto}.player-modal.active{display:block}
+.video-wrap{position:relative;sticky;top:0;width:100%;background:#000;z-index:10; display:flex; justify-content:center; align-items:center; min-height: 200px;}
+video{width:100%;height:auto;max-height:70vh;background:#000;object-fit:contain} /* Removed forced aspect ratio */
+.no-video-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.8);display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:4;text-align:center;padding:20px}
+.no-video-overlay i{font-size:40px;margin-bottom:10px;color:var(--accent)}
+.close-btn{position:absolute;top:10px;right:10px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:16px;z-index:5;display:flex;align-items:center;justify-content:center}
+.player-content{padding:16px;background:linear-gradient(to top,#070707,#121212)}
+.player-title{font-size:24px;font-weight:800;margin-bottom:10px}
+.movie-meta{display:flex;gap:7px;flex-wrap:wrap;font-size:11px;color:#bbb;margin-bottom:12px;align-items:center}
+.player-desc{font-size:13px;line-height:1.6;color:#ccc;margin-bottom:18px}
+.player-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.player-btn{height:48px;border-radius:14px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;transition:.2s}.player-btn:active{transform:scale(.95)}
+.red{background:#E50914}.blue{background:#1976d2}.green{background:#00c853;color:#000}.gold{background:#ffc107;color:#000}.active-state{opacity:.7}
+.watch-progress{height:6px;background:#222;border-radius:10px;overflow:hidden;margin-bottom:20px}.progress-bar{width:45%;height:100%;background:linear-gradient(90deg,#E50914,#ff4d4d)}
+
+.ad-box{background:#111;border-radius:16px;padding:10px;border:1px solid var(--border);margin-bottom:22px;display:flex;flex-direction:column;align-items:center}
+.ad-label{font-size:11px;color:#888;margin-bottom:8px;width:100%;text-align:center}
+.ad-inject-container{overflow:hidden;position:relative;background:#0a0a0a;display:flex;justify-content:center;align-items:center}
+.related-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px}.related-card{min-width:110px;border-radius:14px;overflow:hidden;background:#171717;transition:.3s;cursor:pointer}.related-card:hover{transform:scale(1.05)}
+
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(12,12,12,.96);backdrop-filter:blur(20px);display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--border);z-index:9999}
+.nav-item{display:flex;flex-direction:column;align-items:center;font-size:9px;color:#888;transition:.3s;cursor:pointer}.nav-item i{font-size:18px;margin-bottom:3px}.nav-item.active{color:var(--accent);transform:translateY(-3px)}
+
+.bottom-ad{position:fixed;bottom:64px;left:0;right:0;display:flex;justify-content:center;padding:3px;background:#111;z-index:999;border-top:1px solid var(--border);overflow:hidden;min-height:50px}
+.empty{padding:40px 15px;text-align:center;color:#666;font-size:13px;grid-column:span 2}
+
+.toast-container{position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:999999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{background:rgba(20,20,20,0.95);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid var(--accent);box-shadow:0 4px 15px rgba(0,0,0,0.5);animation:toastIn .3s ease,toastOut .3s ease 2s forwards;backdrop-filter:blur(10px)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-20px)}}
+.hidden-smartlink{display:none}
+
+/* 728x90 Ad Responsiveness */
+.ad-728x90-container { width: 100%; max-width: 728px; margin: 0 auto 15px auto; overflow: hidden; min-height: 90px; display: flex; justify-content: center; background: #0f0f0f; border-radius: 10px; border: 1px solid var(--border); }
+@media (max-width: 730px) { .ad-728x90-container { transform: scale(0.45); transform-origin: top center; height: 40px; margin-bottom: 0; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Mega<span>Flix</span></div>
+  <i class="fa-solid fa-bell" style="font-size:18px;cursor:pointer;color:var(--text2)"></i>
+</header>
+
+<!-- TOP AD (320x50) -->
+<div class="top-ad">
+  <div id="top-ad-container" class="ad-inject-container" style="width:320px;height:50px">
+    <script type="text/javascript">
+    atOptions = {
+      'key' : '3a6d76d177ac3ab40cd26d58595a677b',
+      'format' : 'iframe',
+      'height' : 50,
+      'width' : 320,
+      'params' : {}
+    };
+    </script>
+    <script type="text/javascript" src="https://www.highperformanceformat.com/3a6d76d177ac3ab40cd26d58595a677b/invoke.js"></script>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="page active" id="homePage">
+  <div class="hero" id="heroSection">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-badge" id="heroBadge">🔥 #1 Trending</div>
+      <div class="hero-title" id="heroTitle">Loading...</div>
+      <div class="hero-desc" id="heroDesc"></div>
+      <div class="hero-btns">
+        <button class="btn btn-primary" id="heroWatchBtn"><i class="fa-solid fa-play"></i> Watch</button>
+        <button class="btn btn-dark" id="heroInfoBtn"><i class="fa-solid fa-circle-info"></i> Info</button>
+      </div>
+    </div>
+    <div class="slider-dots" id="sliderDots"></div>
+  </div>
+
+  <!-- 728x90 Ad Banner -->
+  <div class="ad-728x90-container">
+    <script type="text/javascript">
+    atOptions = {
+      'key' : '9986170006ff8ed9a27b7bd2923b2dc7',
+      'format' : 'iframe',
+      'height' : 90,
+      'width' : 728,
+      'params' : {}
+    };
+    </script>
+    <script type="text/javascript" src="https://www.highperformanceformat.com/9986170006ff8ed9a27b7bd2923b2dc7/invoke.js"></script>
+  </div>
+
+  <div class="section-title">🔥 Trending Movies</div>
+  <div class="movie-grid" id="movieGrid">
+    <div class="loading-spinner"><i class="fa-solid fa-spinner fa-spin"></i> Loading Movies...</div>
+  </div>
+</div>
+
+<!-- EXPLORE -->
+<div class="page" id="explorePage">
+  <div class="section-title">Explore Movies</div>
+  <div class="search-box">
+    <i class="fa-solid fa-search search-icon"></i>
+    <input type="text" class="search-input" placeholder="Search movies..." id="searchInput">
+  </div>
+  <div class="movie-grid" id="exploreGrid"></div>
+</div>
+
+<!-- FAVORITES -->
+<div class="page" id="favoritesPage">
+  <div class="section-title">❤️ Favorites</div>
+  <div class="movie-grid" id="favoritesGrid"></div>
+</div>
+
+<!-- DOWNLOADS -->
+<div class="page" id="downloadsPage">
+  <div class="section-title">⬇️ Downloads</div>
+  <div class="movie-grid" id="downloadsGrid"></div>
+</div>
+
+<!-- PLAYER -->
+<div class="player-modal" id="playerModal">
+  <div class="video-wrap">
+    <button class="close-btn" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i></button>
+    <video controls autoplay muted id="mainVideo" playsinline></video>
+    
+    <!-- No Video Overlay -->
+    <div class="no-video-overlay" id="noVideoOverlay">
+      <i class="fa-solid fa-video-slash"></i>
+      <h3>Video Not Available</h3>
+      <p style="font-size:12px;color:#aaa;margin-top:5px">Check back later or try downloading.</p>
+    </div>
+  </div>
+  
+  <div class="player-content">
+    <div class="player-title" id="movieTitle"></div>
+    <div class="movie-meta" id="movieMeta">
+      <span>⭐ <span id="pRating">0</span> Views</span>
+      <span>•</span>
+      <span id="pYear">2024</span>
+      <span>•</span>
+      <span id="pQuality">HD</span>
+    </div>
+    <div class="player-desc" id="movieDesc"></div>
+    
+    <div class="player-actions">
+      <button class="player-btn red" onclick="triggerSmartLink(event)"><i class="fa-solid fa-play"></i> Watch Now</button>
+      <button class="player-btn blue" id="dlBtn" onclick="downloadMovie(currentMovieId, event)"><i class="fa-solid fa-download"></i> Download</button>
+      <button class="player-btn green" id="favBtn" onclick="toggleFavorite(currentMovieId, true)"><i class="fa-solid fa-heart"></i> Favorite</button>
+      <button class="player-btn gold" onclick="shareMovie()"><i class="fa-solid fa-share"></i> Share</button>
+    </div>
+    
+    <div class="watch-progress"><div class="progress-bar"></div></div>
+    
+    <!-- Native Banner Ad -->
+    <div style="margin-bottom: 20px; display:flex; justify-content:center;">
+      <script async="async" data-cfasync="false" src="https://pl27781142.effectivecpmnetwork.com/53beb71c073e27e6a44ae16721195175/invoke.js"></script>
+      <div id="container-53beb71c073e27e6a44ae16721195175"></div>
+    </div>
+
+    <!-- Banner 300x250 Ad -->
+    <div class="ad-box">
+      <div class="ad-label">Sponsored</div>
+      <div id="player-ad-container" class="ad-inject-container" style="width:300px;height:250px">
+        <script type="text/javascript">
+        atOptions = {
+          'key' : 'e30883a8ed8ae3e6dfb8d28406b32e5a',
+          'format' : 'iframe',
+          'height' : 250,
+          'width' : 300,
+          'params' : {}
+        };
+        </script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/e30883a8ed8ae3e6dfb8d28406b32e5a/invoke.js"></script>
+      </div>
+    </div>
+    
+    <div class="section-title">🔥 Related Movies</div>
+    <div class="related-row" id="relatedRow"></div>
+  </div>
+</div>
+
+<!-- BOTTOM AD (320x50) -->
+<div class="bottom-ad">
+  <div id="bottom-ad-container" class="ad-inject-container" style="width:320px;height:50px">
+    <script type="text/javascript">
+    atOptions = {
+      'key' : '3a6d76d177ac3ab40cd26d58595a677b',
+      'format' : 'iframe',
+      'height' : 50,
+      'width' : 320,
+      'params' : {}
+    };
+    </script>
+    <script type="text/javascript" src="https://www.highperformanceformat.com/3a6d76d177ac3ab40cd26d58595a677b/invoke.js"></script>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<a id="smartLinkAnchor" class="hidden-smartlink" href="https://www.effectivecpmnetwork.com/e3psgtze?key=a7e51a63cace225b20af6c95c3b67b25" target="_blank" rel="noopener noreferrer"></a>
+
+<!-- NAV -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="showPage('homePage',this)"><i class="fa-solid fa-house"></i>Home</div>
+  <div class="nav-item" onclick="showPage('explorePage',this)"><i class="fa-solid fa-compass"></i>Explore</div>
+  <div class="nav-item" onclick="showPage('favoritesPage',this)"><i class="fa-solid fa-heart"></i>Favorites</div>
+  <div class="nav-item" onclick="showPage('downloadsPage',this)"><i class="fa-solid fa-download"></i>Downloads</div>
+</div>
+
+<!-- Popunder & Social Bar Scripts (Global) -->
+<script src="https://pl27781123.effectivecpmnetwork.com/2d/c5/6b/2dc56b5690ae24de64c26e8a7dd48eaf.js"></script>
+<script src="https://pl27781128.effectivecpmnetwork.com/a9/bd/00/a9bd00968f4317c968bc821e2a4efb3a.js"></script>
+
+<script>
+// ====== FIREBASE INITIALIZATION ======
+const firebaseConfig = {
+  apiKey: "AIzaSyBfwFZGAyWNb6k8KvdDNBFO2aODH1Fbmd4",
+  authDomain: "movie-website-85123.firebaseapp.com",
+  projectId: "movie-website-85123",
+  storageBucket: "movie-website-85123.firebasestorage.app",
+  messagingSenderId: "289743469153",
+  appId: "1:289743469153:web:5caeb0e111adb536db8820",
+  measurementId: "G-7L0R0R2LHF"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ====== GLOBAL STATE ======
+let allMovies = [];
+let activeSliders = [];
+let currentSlideIndex = 0;
+let sliderInterval;
+
+let favorites = JSON.parse(localStorage.getItem('favorites')||'[]');
+let downloads = JSON.parse(localStorage.getItem('downloads')||'[]');
+let currentMovieId = null;
+
+// ====== TOAST NOTIFICATION ======
+function showToast(message) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerText = message;
+  container.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 2500);
+}
+
+// ====== SLIDER SYSTEM ======
+function setupHeroSlider() {
+  if (activeSliders.length === 0) {
+    document.getElementById('heroTitle').innerText = "No Movies Yet";
+    return;
+  }
+
+  const dotsHtml = activeSliders.map((_, i) => `<div class="dot ${i===0?'active':''}" onclick="goToSlide(${i})"></div>`).join('');
+  document.getElementById('sliderDots').innerHTML = dotsHtml;
+
+  clearInterval(sliderInterval);
+  sliderInterval = setInterval(() => {
+    currentSlideIndex = (currentSlideIndex + 1) % activeSliders.length;
+    updateHeroView();
+  }, 5000);
+
+  updateHeroView();
+}
+
+function goToSlide(index) {
+  currentSlideIndex = index;
+  updateHeroView();
+  clearInterval(sliderInterval);
+  sliderInterval = setInterval(() => {
+    currentSlideIndex = (currentSlideIndex + 1) % activeSliders.length;
+    updateHeroView();
+  }, 5000);
+}
+
+function updateHeroView() {
+  const slide = activeSliders[currentSlideIndex];
+  const heroSection = document.getElementById('heroSection');
+  
+  document.querySelectorAll('.slider-dots .dot').forEach((d, i) => d.classList.toggle('active', i === currentSlideIndex));
+
+  if (slide.type === 'movie') {
+    const movie = allMovies.find(m => m.id === slide.movieId);
+    if (!movie) return;
+    
+    heroSection.style.backgroundImage = `url('${movie.thumb}')`;
+    document.getElementById('heroBadge').innerHTML = `🔥 Trending`;
+    document.getElementById('heroTitle').innerText = movie.title;
+    document.getElementById('heroDesc').innerText = movie.desc;
+    
+    document.getElementById('heroWatchBtn').onclick = () => openMovie(movie.id);
+    document.getElementById('heroInfoBtn').style.display = 'flex';
+    document.getElementById('heroInfoBtn').onclick = () => openMovie(movie.id);
+  } 
+  else if (slide.type === 'ad') {
+    if(slide.adImg) heroSection.style.backgroundImage = `url('${slide.adImg}')`;
+    document.getElementById('heroBadge').innerHTML = `✨ Sponsored`;
+    document.getElementById('heroTitle').innerText = slide.adTitle || 'Special Offer';
+    document.getElementById('heroDesc').innerText = 'Check out this amazing deal!';
+    
+    document.getElementById('heroWatchBtn').onclick = () => window.open(slide.adLink||'#', '_blank');
+    document.getElementById('heroInfoBtn').style.display = 'none';
+  }
+}
+
+// ====== LOAD DATA FROM FIREBASE ======
+async function loadWebsiteData() {
+  try {
+    const postsSnap = await db.collection('posts').where('status', '==', 'published').get();
+    allMovies = postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const sliderSnap = await db.collection('sliders').where('active', '==', true).get();
+    activeSliders = sliderSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    setupHeroSlider();
+    renderGrid('movieGrid', allMovies);
+    renderGrid('exploreGrid', allMovies);
+
+  } catch (error) {
+    console.error("Firebase Fetch Error:", error);
+    document.getElementById('movieGrid').innerHTML = '<div class="empty">Failed to load data.</div>';
+  }
+}
+
+// ====== CARD HTML ======
+function cardHTML(m){
+  const fav = favorites.includes(m.id);
+  return `
+    <div class="card" onclick="openMovie('${m.id}')">
+      <div class="card-overlay"></div>
+      <div class="card-top">
+        <div class="badge">${m.quality||'HD'}</div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick="event.stopPropagation(); toggleFavorite('${m.id}', false)">
+            <i class="fa-${fav?'solid':'regular'} fa-heart" style="color:${fav?'var(--accent)':'#fff'}"></i>
+          </button>
+          <button class="icon-btn" onclick="event.stopPropagation(); downloadMovie('${m.id}', event)">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </div>
+      </div>
+      <img src="${m.thumb}" alt="${m.title}" loading="lazy">
+      <div class="card-info">
+        <div class="card-title">${m.title}</div>
+        <div class="card-meta">
+          <span>⭐ ${(m.views||0).toLocaleString()}</span>
+          <span>${m.year||''}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ====== RENDER GRID ======
+function renderGrid(id, data){
+  const grid = document.getElementById(id);
+  if(data.length===0){
+    grid.innerHTML = '<div class="empty">Nothing Found Here Yet!</div>';
+    return;
+  }
+  grid.innerHTML = data.map(cardHTML).join('');
+}
+
+// ====== FAVORITES & DOWNLOADS RENDER ======
+function renderLocalData() {
+  const favMovies = allMovies.filter(m => favorites.includes(m.id));
+  const dlMovies = allMovies.filter(m => downloads.includes(m.id));
+  renderGrid('favoritesGrid', favMovies);
+  renderGrid('downloadsGrid', dlMovies);
+  updatePlayerButtons();
+}
+
+// ====== PAGE NAV ======
+function showPage(id, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  if(id === 'favoritesPage' || id === 'downloadsPage') renderLocalData();
+}
+
+// ====== FAVORITE ======
+function toggleFavorite(id, isPlayer){
+  if(favorites.includes(id)){
+    favorites = favorites.filter(x=>x!==id);
+    showToast('❌ Removed from Favorites');
+  } else {
+    favorites.push(id);
+    showToast('❤️ Added to Favorites');
+  }
+  localStorage.setItem('favorites', JSON.stringify(favorites));
+  renderLocalData();
+  renderGrid('movieGrid', allMovies);
+  renderGrid('exploreGrid', allMovies);
+}
+
+// ====== DOWNLOAD ======
+function downloadMovie(id, event){
+  if(event) event.stopPropagation();
+  if(!downloads.includes(id)){
+    downloads.push(id);
+    showToast('⬇️ Download Started');
+  } else {
+    showToast('✅ Already Downloaded');
+  }
+  localStorage.setItem('downloads', JSON.stringify(downloads));
+  renderLocalData();
+  triggerSmartLink(event);
+}
+
+// ====== SMARTLINK ======
+function triggerSmartLink(event){
+  if(event) event.stopPropagation();
+  document.getElementById('smartLinkAnchor').click();
+}
+
+// ====== UPDATE PLAYER BUTTONS ======
+function updatePlayerButtons(){
+  if(!currentMovieId) return;
+  const favBtn = document.getElementById('favBtn');
+  const dlBtn = document.getElementById('dlBtn');
+  
+  if(favorites.includes(currentMovieId)){
+    favBtn.innerHTML = '<i class="fa-solid fa-heart-circle-check"></i> Favorited';
+    favBtn.classList.add('active-state');
+  } else {
+    favBtn.innerHTML = '<i class="fa-solid fa-heart"></i> Favorite';
+    favBtn.classList.remove('active-state');
+  }
+
+  if(downloads.includes(currentMovieId)){
+    dlBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Downloaded';
+    dlBtn.classList.add('active-state');
+  } else {
+    dlBtn.innerHTML = '<i class="fa-solid fa-download"></i> Download';
+    dlBtn.classList.remove('active-state');
+  }
+}
+
+// ====== OPEN PLAYER ======
+function openMovie(id){
+  currentMovieId = id;
+  const movie = allMovies.find(m=>m.id===id);
+  if(!movie) return;
+
+  document.getElementById('playerModal').classList.add('active');
+  document.getElementById('movieTitle').innerText = movie.title;
+  document.getElementById('movieDesc').innerText = movie.desc;
+  
+  document.getElementById('pRating').innerText = (movie.views||0).toLocaleString();
+  document.getElementById('pYear').innerText = movie.year || 'N/A';
+  document.getElementById('pQuality').innerText = (movie.quality||'HD') + ' Ultra HD';
+  
+  const video = document.getElementById('mainVideo');
+  const noVideoOverlay = document.getElementById('noVideoOverlay');
+
+  // Set Thumbnail as Poster
+  if(movie.thumb) {
+    video.poster = movie.thumb;
+  }
+
+  // Check if Video URL exists
+  if(movie.video && movie.video.trim() !== '') {
+    video.src = movie.video;
+    noVideoOverlay.style.display = 'none'; 
+    video.play().catch(e => console.log("Autoplay blocked"));
+  } else {
+    video.removeAttribute('src');
+    video.load();
+    noVideoOverlay.style.display = 'flex'; 
+  }
+  
+  renderRelated();
+  renderLocalData(); 
+  triggerSmartLink(null);
+}
+
+// ====== CLOSE PLAYER ======
+function closePlayer(){
+  document.getElementById('playerModal').classList.remove('active');
+  const video = document.getElementById('mainVideo');
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+}
+
+// ====== SHARE ======
+function shareMovie(){
+  if(navigator.share){
+    navigator.share({title:'VisionX Premium',text:'Watch amazing movies on VisionX!',url:location.href}).catch(err=>{});
+  } else {
+    navigator.clipboard.writeText(location.href);
+    showToast('🔗 Link Copied to Clipboard!');
+  }
+}
+
+// ====== RELATED ======
+function renderRelated(){
+  const related = allMovies.filter(m => m.id !== currentMovieId).slice(0, 6);
+  document.getElementById('relatedRow').innerHTML = related.map(m=>`
+    <div class="related-card" onclick="openMovie('${m.id}')">
+      <img src="${m.thumb}" alt="${m.title}">
+    </div>
+  `).join('');
+}
+
+// ====== SEARCH ======
+document.getElementById('searchInput').addEventListener('input', function(){
+  const q = this.value.toLowerCase();
+  const filtered = allMovies.filter(m=> (m.title||'').toLowerCase().includes(q));
+  renderGrid('exploreGrid', filtered);
+});
+
+// ====== INITIALIZE APP ======
+loadWebsiteData();
+
+</script>
+</body>
+</html>
